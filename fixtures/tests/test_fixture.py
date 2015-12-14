@@ -16,7 +16,7 @@
 import types
 
 import testtools
-from testtools.content import text_content
+from testtools.content import text_content, UTF8_TEXT, Content
 from testtools.testcase import skipIf
 
 import fixtures
@@ -283,11 +283,11 @@ class TestFixture(testtools.TestCase):
 
         class B(fixtures.Fixture):
             def _setUp(self):
-                self.addCleanup(self._post_process_details)
                 self.useFixture(A())
+                self.addDetail('bar', Content(UTF8_TEXT, self._post_process_details))
             def _post_process_details(self):
                 foo = self.getDetails()['foo']
-                self.addDetail('bar', text_content(reversed(foo.as_text())))
+                return reversed(foo.as_text())
 
 
         with B() as b:
