@@ -15,9 +15,11 @@
 
 import types
 
+from functools import partial
+
 import testtools
 from testtools.content import text_content, UTF8_TEXT, Content
-from testtools.testcase import skipIf
+from testtools.testcase import skipIf, gather_details
 
 import fixtures
 from fixtures.fixture import gather_details
@@ -293,6 +295,29 @@ class TestFixture(testtools.TestCase):
         with B() as b:
             self.assertEqual(
                 {'foo': text_content('foo'),
+                 'bar': text_content('oof')}, b.getDetails())
+
+    def test_change_details_in_used_fixture_v2(self):
+        # XXX: This test errors with `'NoneType' object is not iterable`
+        #
+        # I want a way to have a fixture that manipulates the details that it
+        # uses, ideally without subclassing.
+        class A(fixtures.Fixture):
+            def _setUp(self):
+                self.addDetail('foo', text_content('foo'))
+
+        class B(fixtures.Fixture):
+            def _setUp(self):
+                a = self.useFixture(A())
+                self.addDetail('bar', Content(UTF8_TEXT, partial(self._post_process_details, self.getDetails()['foo'])))
+                a.addDetail('foo', text_content('replaced'))
+            def _post_process_details(self, foo):
+                return reversed(foo.as_text())
+
+
+        with B() as b:
+            self.assertEqual(
+                {'foo': text_content('replaced'),
                  'bar': text_content('oof')}, b.getDetails())
 
 
